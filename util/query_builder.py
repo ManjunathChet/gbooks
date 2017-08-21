@@ -1,5 +1,6 @@
 import requests
 import json
+import os
 
 
 class QueryBuilder(object):
@@ -15,7 +16,6 @@ class QueryBuilder(object):
         """
         for key, value in kwargs.iteritems():
             setattr(self, key, value)
-            print key + " : " + value
 
         self.base_address = 'https://www.googleapis.com/books/v1/volumes?q='
         self.full_query = self.base_address + self.q
@@ -25,6 +25,8 @@ class QueryBuilder(object):
         """
         get_dict takes the response data and translates it to a dictionary
         """
+
+        print "Querying " + self.full_query + " ..."
         response = requests.get(self.full_query)
         response_json = json.loads(response.text)
         return response_json
@@ -50,6 +52,8 @@ class Library(object):
 
             self.books.append(merged_dict)
 
+            #break
+
 
 def construct_dict(book):
     """
@@ -60,10 +64,29 @@ def construct_dict(book):
     final_dict = {}
     for key in book.keys():
         value = book[key]
-        try:
-            final_dict[key] = str(value)
-        except UnicodeEncodeError:
-            continue
+        #print "KEY: " + key
+        #print "VALUE: " + str(value)
+
+        if type(value) is dict:
+            #print "TYPE IS DICT"
+            merge_dict = final_dict.copy()
+            merge_dict.update(construct_dict(value))
+            # If the value of a certain key is a dictionary, then add that dictionary to the book info
+            # by recursively calling this function
+        if type(value) is int or type(value) is float:
+            #print "TYPE IS NUM"
+            final_dict[key] = value
+            # If a value is a number, then keep its value as an int or float.
+            #
+            # If we dont do this step, then sorting these values will fail, since they will be cast as
+            # strings.
+            # ex.) 98 will be greater than 1200, because of lexicographical sort.
+        else:
+            try:
+                final_dict[key] = str(value)
+            except UnicodeEncodeError:
+                continue
+
     return final_dict
 
 def is_valid_query(query):
@@ -97,3 +120,60 @@ def is_valid_filter(sort_input, valid_filters):
         return False
     else:
         return True
+
+
+def check_if_query_is_stored_locally(query):
+    """
+    Check if a CSV file is already created for this query
+    :param query: string; input from user
+    :return: True if CSV file exists, False if not
+    """
+
+    filename = "results/" + query + '.csv'
+
+    if os.path.isfile(filename):
+        print "Query is already stored locally."
+        return True
+    else:
+        print "Query is not stored locally."
+        return False
+
+
+def build_library_from_csv(query):
+    """
+    Construct book library from stored file
+    :param query: string; input from user, only used for filename
+    :return: list of book dictionaries; library
+    """
+
+    filename = "results/" + query + '.csv'
+    library = []
+
+    print "Reading from " + filename
+
+    with open(filename, 'rb') as csv_file:
+        book_list = csv_file.readlines()
+        for book in book_list:
+            library.append(json.loads(book))
+
+    return library
+
+
+def save_library_to_csv(query, book_library):
+    """
+    Function that creates CSV file
+    :param query: string, input from user
+    :param book_library: list, all books (dictionaries)
+    :return: Nothing, a file is created in "results"
+    """
+    filename = "results/" + query + '.csv'
+
+    print "Saving library to " + filename + " ..."
+
+    with open(filename, 'wb') as csv_file:
+        for book in book_library:
+            book_json = json.dumps(book)
+            csv_file.write(book_json)
+            csv_file.write('\n')
+
+        print "Library written to " + str(os.path.abspath(filename))

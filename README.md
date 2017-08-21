@@ -34,9 +34,8 @@ CSV file that can be found in the 'results' folder.
 * Missing fields are omitted
 
 #### Known Issues
-* Prompt for loading CSV is still in progress. The user can only start new queries and save them.
-* Sorts for counts is currently broken (ex. ratingsCount ranks 10 > 98)
-* Sorts for missing fields is broken
 * Paths for output files are absolute
 * No file validation is done prior to writing files
 * No file locks are implemented yet
+* Only very basic input validation is performed
+* Sort by price amount is broken

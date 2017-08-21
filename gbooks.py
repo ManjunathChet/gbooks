@@ -1,10 +1,12 @@
-import csv
-import os
-from util.query_builder import QueryBuilder, Library, is_valid_query, is_valid_filter
+from util.query_builder import QueryBuilder, \
+    Library, \
+    is_valid_query, \
+    is_valid_filter, \
+    check_if_query_is_stored_locally, \
+    build_library_from_csv, \
+    save_library_to_csv
 
-
-if __name__== "__main__":
-
+def gbooks():
     # --------------------
     #   PROMPTS
     # ____________________
@@ -32,22 +34,31 @@ if __name__== "__main__":
     #   BUILD RESPONSE DICTIONARY
     # ____________________
 
-    qb = QueryBuilder(q=query)
-    # TO-DO: Add more elements to the query (MaxResults, filters, etc.)
+    query_is_in_csv = check_if_query_is_stored_locally(query)
 
-    book_library = Library(qb.get_dict()).books
-    # Construct a dictionary from the specified query
+    if query_is_in_csv:
+        book_library = build_library_from_csv(query)
+    else:
+        qb = QueryBuilder(q=query)
+        # TO-DO: Add more elements to the query (MaxResults, filters, etc.)
+        book_library = Library(qb.get_dict()).books
+        # Construct a list of books from the specified query
 
     # --------------------
     # SORT
     # ____________________
+    for book in book_library:
+        if sort_input not in book.keys():
+            book[sort_input] = None
 
-    if sort_input:
-        try:
-            book_library.sort(key=lambda x:x[sort_input], reverse=True)
-        except KeyError:
-            print "Some books don't have " + sort_input
-    # If a sort field is specified, then perform a sort and modify the library
+    if "count" in sort_input.lower() or "date" in sort_input.lower() or "rating" in sort_input.lower():
+        # If the specified field is a count/date, then reverse the sort (higher/latest at the top)
+        book_library.sort(key=lambda x: x[sort_input], reverse=True)
+        # Sort 1-liner from StackOverflow; source:
+        # https://stackoverflow.com/a/73050
+    elif sort_input:
+        # If its not a "count" type field, then we use a regular sort
+        book_library.sort(key=lambda x: x[sort_input])
 
     # --------------------
     #   OUTPUT RESULTS
@@ -66,19 +77,8 @@ if __name__== "__main__":
     #   SAVE CSV FILE
     # ____________________
 
-    filename = "results/" + query + '.csv'
-    with open(filename, 'wb') as csv_file:
-        book_library_writer = csv.writer(csv_file, delimiter='|')
-        for book in book_library:
-            book_library_writer.writerow([book[key] for key in book])
-        print "Library written to " + str(os.path.abspath(filename))
+    save_library_to_csv(query, book_library)
 
-    # TO-DO:
-    # Extend the app to load from a CSV file and perform sort functions
-    #   - The following comments are modules under construction for CSV loading
+if __name__== "__main__":
+    gbooks()
 
-    #with open(filename, 'rb') as csv_file:
-    #    book_reader = csv.reader(csv_file, delimiter='|')
-    #    for row in book_reader:
-    #       print "  ;  ".join(row)
-    #        print "\n"
