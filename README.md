@@ -3,7 +3,8 @@ A console line application that interacts with the google books API
 
 #### How to Run
 
-From this directory, run:
+Clone this repository. From this directory, run:
+
 `python gbooks.py`
 
 #### Behavior
